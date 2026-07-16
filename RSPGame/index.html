@@ -56,13 +56,22 @@
 
     // run the webcam image through the image model
     async function predict() {
-        // predict can take in an image, video or canvas html element
+        // 1. 웹캠 이미지를 모델에 넣어 예측 데이터를 가져옵니다.
         const prediction = await model.predict(webcam.canvas);
+
+        let highestProbability = 0; // 가장 높은 확률 값을 저장할 변수
+        let bestClassName = "";     // 가장 높은 확률의 항목 이름을 저장할 변수
+
+        // 2. 모든 예측 결과를 확인하여 가장 확률이 높은 항목을 찾습니다.
         for (let i = 0; i < maxPredictions; i++) {
-            const classPrediction =
-                prediction[i].className + ": " + prediction[i].probability.toFixed(2);
-            labelContainer.childNodes[i].innerHTML = classPrediction;
+            if (prediction[i].probability > highestProbability) {
+                highestProbability = prediction[i].probability;
+                bestClassName = prediction[i].className;
+            }
         }
+
+        // 3. 화면(labelContainer)에 가장 확률이 높은 항목의 이름만 표시합니다. (확률 %는 제외)
+        labelContainer.innerHTML = bestClassName;
     }
 </script>
 
