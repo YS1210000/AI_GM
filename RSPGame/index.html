@@ -1,79 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>인공지능 가위바위보 대결</title>
+    <style>
+        /* GUI 디자인 (CSS) */
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 5px;
+        }
+        .scoreboard {
+            background: white;
+            max-width: 400px;
+            margin: 0 auto 20px;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-around;
+            font-weight: bold;
+        }
+        .record-box {
+            color: #d93025;
+        }
+        #webcam-container {
+            margin: 20px auto;
+            width: 300px;
+            height: 300px;
+            background-color: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #play-btn {
+            background-color: #34a853;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 15px 30px;
+        }
+        #play-btn:hover {
+            background-color: #2b803e;
+        }
+        .result-area {
+            background: white;
+            max-width: 500px;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .vs-text {
+            font-size: 24px;
+            margin: 15px 0;
+        }
+        #final-result {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a73e8;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <div>가위바위보 게임</div>
-<button type="button" onclick="init()">Start</button>
-<div id="webcam-container"></div>
-<div id="label-container"></div>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-<script type="text/javascript">
-    // More API functions here:
-    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/image
 
-    // the link to your model provided by Teachable Machine export panel
-    const URL = "https://teachablemachine.withgoogle.com/models/mXn8LcmcQ/";
+    <h1>🤖 AI 가위바위보 대결</h1>
+    <p>웹캠을 켜고 동작을 취한 뒤 '가위바위보!' 버튼을 누르세요.</p>
 
-    let model, webcam, labelContainer, maxPredictions;
+    <!-- 점수 및 기록판 -->
+    <div class="scoreboard">
+        <div>현재 연속 승리: <span id="current-streak">0</span>연승</div>
+        <div class="record-box">👑 최고 기록: <span id="best-record">없음 (0연승)</span></div>
+    </div>
 
-    // Load the image model and setup the webcam
-    async function init() {
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
+    <!-- 버튼 영역 -->
+    <div class="controls">
+        <button type="button" onclick="init()" id="start-btn">1. 웹캠 켜기</button>
+    </div>
 
-        // load the model and metadata
-        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
-        // or files from your local hard drive
-        // Note: the pose library adds "tmImage" object to your window (window.tmImage)
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+    <!-- 웹캠 화면 -->
+    <div id="webcam-container"></div>
 
-        // Convenience function to setup a webcam
-        const flip = true; // whether to flip the webcam
-        webcam = new tmImage.Webcam(400, 400, flip); // width, height, flip
-        await webcam.setup(); // request access to the webcam
-        await webcam.play();
-        window.requestAnimationFrame(loop);
+    <div class="controls">
+        <button type="button" onclick="playGame()" id="play-btn" disabled>2. 가위바위보 내기!</button>
+    </div>
 
-        // append elements to the DOM
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) { // and class labels
-            labelContainer.appendChild(document.createElement("div"));
+    <!-- 결과 화면 -->
+    <div class="result-area">
+        <div class="vs-text">
+            나: <span id="user-move">?</span> 
+            <span style="color:#999; font-size:16px; margin: 0 10px;">VS</span> 
+            컴퓨터: <span id="computer-move">?</span>
+        </div>
+        <div id="final-result">-</div>
+    </div>
+
+    <!-- 텐서플로우 스크립트 -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script>
+        // ★★★ 여기에 본인의 티처블 머신 모델 URL을 넣으세요 ★★★
+        const URL = "https://teachablemachine.withgoogle.com/models/mXn8LcmcQ/";
+
+        let model, webcam, labelContainer, maxPredictions;
+        let currentUserPose = ""; // 현재 인식된 내 동작
+        let currentStreak = 0;    // 현재 연속 승수
+        
+        // 브라우저에 저장된 최고 기록 불러오기 (새로고침해도 유지됨)
+        let maxStreak = localStorage.getItem("rspMaxStreak") || 0;
+        let maxStreakName = localStorage.getItem("rspMaxName") || "없음";
+
+        // 초기 최고 기록 화면에 표시
+        updateRecordUI();
+
+        // 1. 모델 및 웹캠 초기화 (시작 버튼 클릭 시 실행)
+        async function init() {
+            document.getElementById("start-btn").disabled = true;
+            document.getElementById("start-btn").innerText = "로딩 중...";
+
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true; 
+            webcam = new tmImage.Webcam(300, 300, flip);
+            await webcam.setup();
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            
+            document.getElementById("start-btn").style.display = "none";
+            document.getElementById("play-btn").disabled = false; // 게임 버튼 활성화
         }
-    }
 
-    async function loop() {
-        webcam.update(); // update the webcam frame
-        await predict();
-        window.requestAnimationFrame(loop);
-    }
+        async function loop() {
+            webcam.update();
+            await predict();
+            window.requestAnimationFrame(loop);
+        }
 
-    // run the webcam image through the image model
-    async function predict() {
-        // 1. 웹캠 이미지를 모델에 넣어 예측 데이터를 가져옵니다.
-        const prediction = await model.predict(webcam.canvas);
-
-        let highestProbability = 0; // 가장 높은 확률 값을 저장할 변수
-        let bestClassName = "";     // 가장 높은 확률의 항목 이름을 저장할 변수
-
-        // 2. 모든 예측 결과를 확인하여 가장 확률이 높은 항목을 찾습니다.
-        for (let i = 0; i < maxPredictions; i++) {
-            if (prediction[i].probability > highestProbability) {
-                highestProbability = prediction[i].probability;
-                bestClassName = prediction[i].className;
+        // 2. 실시간 동작 예측 (화면에 표시하지 않고 데이터만 업데이트)
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            let highestProb = 0;
+            
+            for (let i = 0; i < maxPredictions; i++) {
+                if (prediction[i].probability > highestProb) {
+                    highestProb = prediction[i].probability;
+                    currentUserPose = prediction[i].className; 
+                }
             }
         }
 
-        // 3. 화면(labelContainer)에 가장 확률이 높은 항목의 이름만 표시합니다. (확률 %는 제외)
-        labelContainer.innerHTML = bestClassName;
-    }
-</script>
+        // 3. 게임 진행 ('가위바위보 내기' 버튼 클릭 시 실행)
+        function playGame() {
+            if (!currentUserPose) return;
 
+            // 컴퓨터의 선택 (0, 1, 2 중 랜덤)
+            const choices = ["가위", "바위", "보"];
+            const computerPose = choices[Math.floor(Math.random() * 3)];
+
+            // 화면에 낸 것 표시
+            document.getElementById("user-move").innerText = currentUserPose;
+            document.getElementById("computer-move").innerText = computerPose;
+
+            // 승패 판별
+            const result = getResult(currentUserPose, computerPose);
+            
+            const resultTextEl = document.getElementById("final-result");
+
+            if (result === "승리") {
+                currentStreak++;
+                resultTextEl.innerText = "🎉 승리했습니다!";
+                resultTextEl.style.color = "#34a853";
+            } else if (result === "패배") {
+                resultTextEl.innerText = "😢 패배했습니다...";
+                resultTextEl.style.color = "#ea4335";
+                
+                // 패배 시 기록 체크
+                checkHighScore();
+                currentStreak = 0; // 연승 초기화
+            } else {
+                resultTextEl.innerText = "🤝 무승부!";
+                resultTextEl.style.color = "#fbbc05";
+                // 무승부일 때는 연승이 끊기지 않고 유지됨
+            }
+
+            document.getElementById("current-streak").innerText = currentStreak;
+        }
+
+        // 4. 승패 로직 계산
+        function getResult(user, comp) {
+            if (user === comp) return "무승부";
+
+            // ★ 주의: user 동작 이름은 티처블 머신에 입력한 '클래스 이름'과 완벽히 일치해야 합니다.
+            if (
+                (user === "가위" && comp === "보") ||
+                (user === "바위" && comp === "가위") ||
+                (user === "보" && comp === "바위")
+            ) {
+                return "승리";
+            }
+            return "패배";
+        }
+
+        // 5. 신기록 달성 확인 및 이름 저장
+        function checkHighScore() {
+            if (currentStreak > 0 && currentStreak > maxStreak) {
+                // 약간의 지연을 주어 화면 렌더링 후 알림창 띄우기
+                setTimeout(() => {
+                    const playerName = prompt(`🎉 새로운 최고 기록(${currentStreak}연승)입니다!\n이름을 입력해주세요:`, "익명");
+                    if (playerName) {
+                        maxStreak = currentStreak;
+                        maxStreakName = playerName;
+                        
+                        // 브라우저 저장소에 기록
+                        localStorage.setItem("rspMaxStreak", maxStreak);
+                        localStorage.setItem("rspMaxName", maxStreakName);
+                        
+                        updateRecordUI();
+                    }
+                }, 100);
+            }
+        }
+
+        // 최고 기록 텍스트 업데이트
+        function updateRecordUI() {
+            document.getElementById("best-record").innerText = `${maxStreakName} (${maxStreak}연승)`;
+        }
+    </script>
 </body>
 </html>
