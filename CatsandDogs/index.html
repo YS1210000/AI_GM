@@ -89,3 +89,83 @@
         <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)">
         
         <img id="image-preview" alt="업로드된 이미지 미리보기">
+
+        <div class="result-box">
+            <div style="font-size: 16px; color: #666; margin-bottom: 5px;">분석 결과</div>
+            <div id="result-text">사진을 올려주세요!</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+    
+    <script>
+        // 제공해주신 모델 URL
+        const URL = "const URL = "./my_model/";
+
+        let model, maxPredictions;
+
+        // 1. 페이지가 열리자마자 모델을 미리 로딩합니다.
+        window.onload = async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+            
+            // 모델 로딩이 완료되면 로딩 메시지를 숨기고 업로드 버튼을 보여줍니다.
+            document.getElementById("loading-msg").style.display = "none";
+            document.getElementById("upload-label").style.display = "inline-block";
+        }
+
+        // 2. 사용자가 사진을 업로드했을 때 실행되는 함수
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            
+            // 파일을 성공적으로 읽어왔을 때
+            reader.onload = function(e) {
+                const imgElement = document.getElementById("image-preview");
+                imgElement.src = e.target.result; // 이미지 태그에 사진 띄우기
+                imgElement.style.display = "block"; // 숨겨뒀던 이미지 태그 보이기
+                
+                document.getElementById("result-text").innerText = "분석 중... 🔍";
+                document.getElementById("result-text").style.color = "#ea4335";
+
+                // 이미지가 화면에 완전히 로드된 후 인공지능 분석 시작
+                imgElement.onload = function() {
+                    predict(imgElement);
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        // 3. 업로드된 이미지를 모델에 넣어 예측하는 함수
+        async function predict(imageElement) {
+            // 모델이 이미지를 분석
+            const prediction = await model.predict(imageElement, false);
+            
+            let highestProb = 0;
+            let bestClassName = "";
+
+            // 가장 확률이 높은 결과 찾기
+            for (let i = 0; i < maxPredictions; i++) {
+                if (prediction[i].probability > highestProb) {
+                    highestProb = prediction[i].probability;
+                    bestClassName = prediction[i].className;
+                }
+            }
+
+            // 결과를 화면에 출력 (확률을 퍼센트로 변환하여 함께 표시)
+            const probPercent = Math.round(highestProb * 100);
+            const resultTextEl = document.getElementById("result-text");
+            
+            resultTextEl.innerText = `${bestClassName} (${probPercent}%)`;
+            resultTextEl.style.color = "#1a73e8";
+        }
+    </script>
+</body>
+</html>
