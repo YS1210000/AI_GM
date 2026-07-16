@@ -3,3 +3,5 @@
 
 
 https://teachablemachine.withgoogle.com/
+활용 수업 진행
+직접 데이터셋 구축(웹캠으로 사용자 동작을 인식, 설정)
