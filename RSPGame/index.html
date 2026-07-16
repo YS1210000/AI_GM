@@ -113,7 +113,7 @@
 </head>
 <body>
 
-    <h1>🤖 AI 가위바위보 대결 v2/h1>
+    <h1>🤖 AI 가위바위보 대결 v3</h1>
     <p>웹캠을 켜고 '가위바위보 내기!' 버튼을 누른 뒤, 카운트다운에 맞춰 동작을 취하세요.</p>
 
     <!-- 점수 및 기록판 -->
@@ -244,8 +244,8 @@
             const resultTextEl = document.getElementById("final-result");
             const playBtn = document.getElementById("play-btn");
 
-            // 예외 처리: 동작을 인식하지 못했거나, '아무것도 내지 않음'일 경우
-            if (!currentUserPose || currentUserPose === "아무것도 내지 않음") {
+            // 예외 처리: 동작을 인식하지 못했거나, '아무것도 내지않음'일 경우
+            if (!currentUserPose || currentUserPose === "아무것도 내지않음") {
                 resultTextEl.innerText = "⚠️ 손을 카메라 중앙에 명확히 보여주세요!";
                 resultTextEl.style.color = "#fbbc05";
                 
@@ -257,7 +257,7 @@
                 return;
             }
 
-            // 컴퓨터의 선택 (컴퓨터는 '아무것도 내지 않음'을 내지 않음)
+            // 컴퓨터의 선택 (컴퓨터는 '아무것도 내지않음'을 내지 않음)
             const choices = ["가위", "바위", "보"];
             const computerPose = choices[Math.floor(Math.random() * 3)];
 
